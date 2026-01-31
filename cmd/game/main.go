@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/CCAtAlvis/xorfall/src"
+	"github.com/CCAtAlvis/xorfall/src/core"
 )
 
 func main() {
-	game := src.NewGame()
+	game := core.NewGame()
 	defer game.Close()
 
 	game.Start()
