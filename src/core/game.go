@@ -30,27 +30,27 @@ func NewGame() *Game {
 	rl.SetTargetFPS(configs.TargetFPS)
 	configs.Init()
 
-	debugComponent := components.NewDebugComponent()
-	debugWidth, debugHeight := debugComponent.GetSize()
+	// debugComponent := components.NewDebugComponent()
+	// debugWidth, debugHeight := debugComponent.GetSize()
 	containers := []render.Container{
-		{
-			Component: debugComponent,
-			Tint:      rl.Color{R: 255, G: 255, B: 255, A: 200},
-			XOffset:   int32(float32(configs.VirtualWidth)*0.5 - float32(debugWidth)*0.5),
-			YOffset:   int32(float32(configs.VirtualHeight)*0.5 - float32(debugHeight)*0.5),
-			Visible:   true,
-		},
 		// {
-		// 	Component: components.NewGridComponent(),
-		// 	Tint:      rl.White,
-		// 	X:         0,
-		// 	Y:         0,
+		// 	Component: debugComponent,
+		// 	Tint:      rl.Color{R: 255, G: 255, B: 255, A: 200},
+		// 	OffsetX:   int32(float32(configs.VirtualWidth)*0.5 - float32(debugWidth)*0.5),
+		// 	OffsetY:   int32(float32(configs.VirtualHeight)*0.5 - float32(debugHeight)*0.5),
+		// 	Visible:   true,
 		// },
+		{
+			Component: components.NewGridComponent(),
+			Tint:      rl.White,
+			OffsetX:   int32(float32(configs.VirtualWidth)*0.5 - float32(360)*0.5),
+			OffsetY:   int32(float32(configs.VirtualHeight)*0.5 - float32(720)*0.5),
+		},
 		{
 			Component: components.NewFPSComponent(),
 			Tint:      rl.White,
-			XOffset:   10,
-			YOffset:   10,
+			OffsetX:   10,
+			OffsetY:   10,
 		},
 	}
 
@@ -74,25 +74,21 @@ func (g *Game) Update() {
 	for _, container := range g.containers {
 		component := container.Component
 		component.Update(configs.GameTime)
-	}
-}
-
-func (g *Game) Render() {
-	for _, container := range g.containers {
 		container.Render()
 	}
 }
 
-func (g *Game) Draw() {
+func (g *Game) Render() {
 	rl.BeginTextureMode(configs.VirtualScreen)
 	rl.ClearBackground(rl.Blank)
 	for _, container := range g.containers {
 		container.Draw()
 	}
 	rl.EndTextureMode()
+}
 
+func (g *Game) Draw() {
 	rl.BeginDrawing()
-	rl.ClearBackground(rl.Blank)
 
 	source := rl.Rectangle{
 		X:      0,

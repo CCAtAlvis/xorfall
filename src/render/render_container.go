@@ -7,8 +7,8 @@ import (
 
 type Container struct {
 	Component components.Component
-	XOffset   int32
-	YOffset   int32
+	OffsetX   int32
+	OffsetY   int32
 	Width     int32
 	Height    int32
 	Tint      rl.Color
@@ -32,8 +32,8 @@ func (c *Container) Draw() {
 	}
 
 	dst := rl.Rectangle{
-		X:      float32(c.XOffset),
-		Y:      float32(c.YOffset),
+		X:      float32(c.OffsetX),
+		Y:      float32(c.OffsetY),
 		Width:  float32(w),
 		Height: float32(h),
 	}
