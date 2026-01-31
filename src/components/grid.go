@@ -72,6 +72,10 @@ type GridComponent struct {
 }
 
 func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
+	if configs.GameState().GetGameState() != configs.GameStatePlaying {
+		return
+	}
+
 	if rl.IsKeyPressed(rl.KeyR) {
 		// randomizeRow := int(rl.GetRandomValue(0, int32(g.board.currentRowIndex)))
 		g.board.rows[0].Randomize()
@@ -80,7 +84,7 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 	row := g.board.rows[0]
 	if slices.Contains(g.board.validRowStates, row.bits) {
 		g.board.rows = g.board.rows[1 : g.board.currentRowIndex+1]
-		g.board.currentRowIndex -= 1
+		g.board.currentRowIndex--
 		if g.board.currentRowIndex < 0 {
 			// TODO: Handle this case
 			g.board.currentRowIndex = 0
@@ -90,18 +94,23 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 
 	g.board.lastRowSpawnTime += configs.GameTime.Delta
 	if g.board.lastRowSpawnTime >= g.board.currentRowSpawnInterval {
-		g.board.rows = append(g.board.rows, GenerateRandomRow())
 		g.board.currentRowIndex++
 		if g.board.currentRowIndex >= RowCount {
-			// TODO: Handle this case
-			g.board.currentRowIndex = RowCount - 1
+			g.board.currentRowIndex--
+			configs.GameState().SetGameState(configs.GameStateGameOver)
+			return
 		}
 		g.board.lastRowSpawnTime = 0
+		g.board.rows = append(g.board.rows, GenerateRandomRow())
 		fmt.Println("row spawned", g.board.currentRowIndex, len(g.board.rows))
 	}
 
 	if rl.IsKeyPressed(rl.KeySpace) {
 		g.board.rows[0].bits = 0b11111111
+	}
+
+	if rl.IsKeyPressed(rl.KeyQ) {
+		g.Reset()
 	}
 }
 
@@ -158,6 +167,22 @@ func (g *GridComponent) Render() {
 	g.End()
 }
 
+func (g *GridComponent) Reset() {
+	board := Board{
+		rows:                    make([]Row, 0),
+		currentRowIndex:         InitialRowCount - 1,
+		validRowStates:          make([]uint8, 0),
+		currentRowSpawnInterval: 0.5,
+	}
+	for range InitialRowCount {
+		board.rows = append(board.rows, GenerateRandomRow())
+	}
+	board.validRowStates = append(board.validRowStates, 0b11111111)
+	board.validRowStates = append(board.validRowStates, 0b0)
+
+	g.board = board
+}
+
 func NewGridComponent() *GridComponent {
 	cellSize := int32(28)
 	cellPadding := int32(8)
@@ -169,25 +194,15 @@ func NewGridComponent() *GridComponent {
 	gridWidth := (ColumnCount * cellSize) + ((ColumnCount - 1) * cellPadding) + (2 * (gridBorderThickness + gridBorderThickness/2)) + (2 * OffsetX)
 	gridHeight := (RowCount * cellSize) + ((RowCount - 1) * cellPadding) + (2 * (gridBorderThickness + gridBorderThickness/2)) + (2 * OffsetY)
 
-	board := Board{
-		rows:                    make([]Row, 0),
-		currentRowIndex:         InitialRowCount - 1,
-		validRowStates:          make([]uint8, 0),
-		currentRowSpawnInterval: 1.0,
-	}
-	for range InitialRowCount {
-		board.rows = append(board.rows, GenerateRandomRow())
-	}
-	board.validRowStates = append(board.validRowStates, 0b11111111)
-	board.validRowStates = append(board.validRowStates, 0b0)
-
-	return &GridComponent{
+	gridComponent := &GridComponent{
 		BaseComponent:       NewBaseComponent("grid", gridWidth, gridHeight),
 		cellSize:            cellSize,
 		cellPadding:         cellPadding,
 		cellColor:           cellColor,
 		gridBorderThickness: gridBorderThickness,
 		gridBorderColor:     gridBorderColor,
-		board:               board,
 	}
+	gridComponent.Reset()
+
+	return gridComponent
 }
