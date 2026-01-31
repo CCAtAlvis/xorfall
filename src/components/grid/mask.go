@@ -63,6 +63,7 @@ type MaskManager struct {
 	currentMask               *Mask
 	currentMaskLastUpdateTime float32
 	currentMaskRowIndex       int
+	currentMaskKeepFalling    bool
 
 	nextMasks []*Mask
 }
@@ -85,6 +86,7 @@ func (m *MaskManager) DestroyCurrentMask() {
 	m.currentMask = nil
 	m.currentMaskRowIndex = -1
 	m.currentMaskLastUpdateTime = 0
+	m.currentMaskKeepFalling = false
 }
 
 func (m *MaskManager) SetCurrentMask(mask *Mask) {
@@ -92,21 +94,21 @@ func (m *MaskManager) SetCurrentMask(mask *Mask) {
 }
 
 func (m *MaskManager) UpdateCurrentMask(gameTime *configs.GameTimeManager) {
-	if rl.IsKeyPressed(rl.KeyRight) {
+	if rl.IsKeyPressed(rl.KeyRight) || rl.IsKeyPressedRepeat(rl.KeyRight) {
 		newCol := m.currentMask.StartCol + 1
 		if newCol+m.currentMask.Length <= ColumnCount {
 			m.currentMask.StartCol = newCol
 		}
 	}
 
-	if rl.IsKeyPressed(rl.KeyLeft) {
+	if rl.IsKeyPressed(rl.KeyLeft) || rl.IsKeyPressedRepeat(rl.KeyLeft) {
 		newCol := m.currentMask.StartCol - 1
 		if newCol >= 0 {
 			m.currentMask.StartCol = newCol
 		}
 	}
 
-	if rl.IsKeyPressed(rl.KeyDown) {
+	if rl.IsKeyPressed(rl.KeyDown) || rl.IsKeyPressedRepeat(rl.KeyDown) {
 		newRow := m.currentMaskRowIndex + 1
 		if newRow < RowCount {
 			m.currentMaskRowIndex = newRow
@@ -117,8 +119,13 @@ func (m *MaskManager) UpdateCurrentMask(gameTime *configs.GameTimeManager) {
 		}
 	}
 
+	if rl.IsKeyPressed(rl.KeySpace) {
+		m.currentMaskKeepFalling = true
+		m.currentMask.Speed = 20
+	}
+
 	m.currentMaskLastUpdateTime += configs.GameTime.Delta
-	if m.currentMaskLastUpdateTime >= m.currentMask.SpeedFloat {
+	if m.currentMaskLastUpdateTime >= 1.0/float32(m.currentMask.Speed) {
 		m.currentMaskLastUpdateTime = 0
 		m.currentMaskRowIndex++
 		if m.currentMaskRowIndex >= RowCount {

@@ -51,7 +51,7 @@ type Board struct {
 	rows            []Row
 	currentRowIndex int
 
-	validRowStates          []uint8
-	lastRowSpawnTime        float32
-	currentRowSpawnInterval float32
+	validRowStates   []uint8
+	lastRowSpawnTime float32
+	rowSpawnInterval float32
 }

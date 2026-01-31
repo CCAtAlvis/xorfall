@@ -33,10 +33,6 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 		return
 	}
 
-	if rl.IsKeyPressed(rl.KeyR) {
-		g.board.rows[0] = GenerateRandomRow()
-	}
-
 	g.maskManager.UpdateCurrentMask(gameTime)
 	currentMaskRowIndex := g.maskManager.currentMaskRowIndex
 	topRow := RowCount - g.board.currentRowIndex - 1
@@ -62,20 +58,14 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 	}
 
 	g.board.lastRowSpawnTime += configs.GameTime.Delta
-	if g.board.lastRowSpawnTime >= g.board.currentRowSpawnInterval {
+	if g.board.lastRowSpawnTime >= g.board.rowSpawnInterval {
 		g.board.currentRowIndex++
-		if g.board.currentRowIndex >= RowCount {
-			g.board.currentRowIndex--
+		if g.board.currentRowIndex >= RowCount-1 {
 			configs.GameState().SetGameState(configs.GameStateGameOver)
-			return
 		}
 		g.board.lastRowSpawnTime = 0
 		g.board.rows = append(g.board.rows, GenerateRandomRow())
 		fmt.Println("row spawned", g.board.currentRowIndex, len(g.board.rows))
-	}
-
-	if rl.IsKeyPressed(rl.KeyTab) {
-		g.board.rows[0].bits = 0b11111111
 	}
 
 	if rl.IsKeyPressed(rl.KeyQ) {
@@ -141,10 +131,10 @@ func (g *GridComponent) Render() {
 
 func (g *GridComponent) Reset() {
 	board := &Board{
-		rows:                    make([]Row, 0),
-		currentRowIndex:         InitialRowCount - 1,
-		validRowStates:          make([]uint8, 0),
-		currentRowSpawnInterval: 3,
+		rows:             make([]Row, 0),
+		currentRowIndex:  InitialRowCount - 1,
+		validRowStates:   make([]uint8, 0),
+		rowSpawnInterval: 2,
 	}
 	for range InitialRowCount {
 		board.rows = append(board.rows, GenerateRandomRow())
