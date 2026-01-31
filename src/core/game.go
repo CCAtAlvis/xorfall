@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/CCAtAlvis/xorfall/src/components"
+	"github.com/CCAtAlvis/xorfall/src/components/grid"
 	"github.com/CCAtAlvis/xorfall/src/configs"
 	"github.com/CCAtAlvis/xorfall/src/render"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -24,8 +25,8 @@ func NewGame() *Game {
 	rl.InitWindow(1280, 720, "My Raylib Game")
 	isFullscreen := false
 	if !rl.IsWindowFullscreen() {
-		isFullscreen = true
-		rl.ToggleFullscreen()
+		// isFullscreen = true
+		// rl.ToggleFullscreen()
 	}
 	rl.SetTargetFPS(configs.TargetFPS)
 	configs.Init()
@@ -41,7 +42,7 @@ func NewGame() *Game {
 		// 	Visible:   true,
 		// },
 		{
-			Component: components.NewGridComponent(),
+			Component: grid.NewGridComponent(),
 			Tint:      rl.White,
 			OffsetX:   int32(float32(configs.VirtualWidth)*0.5 - float32(360)*0.5),
 			OffsetY:   int32(float32(configs.VirtualHeight)*0.5 - float32(720)*0.5),

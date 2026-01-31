@@ -1,9 +1,10 @@
-package components
+package grid
 
 import (
 	"fmt"
 	"slices"
 
+	"github.com/CCAtAlvis/xorfall/src/components"
 	"github.com/CCAtAlvis/xorfall/src/configs"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -14,54 +15,10 @@ const InitialRowCount = 3
 const OffsetX = int32(10)
 const OffsetY = int32(32)
 
-type Row struct {
-	bits uint8
-}
-
-func (r *Row) IsBitSet(col int) bool {
-	return r.bits&(1<<col) != 0
-}
-
-func (r *Row) SetBit(col int) {
-	r.bits |= (1 << col)
-}
-
-func (r *Row) ClearBit(col int) {
-	r.bits &^= (1 << col)
-}
-
-func (r *Row) FlipBit(col int) {
-	r.bits ^= (1 << col)
-}
-
-func (r *Row) IsAllOn() bool {
-	return r.bits == 0b11111111
-}
-
-func (r *Row) IsAllOff() bool {
-	return r.bits == 0
-}
-
-func (r *Row) Randomize() {
-	r.bits = uint8(rl.GetRandomValue(0, 255))
-}
-
-func GenerateRandomRow() Row {
-	return Row{bits: uint8(rl.GetRandomValue(0, 255))}
-}
-
-type Board struct {
-	rows            []Row
-	currentRowIndex int
-
-	validRowStates          []uint8
-	lastRowSpawnTime        float32
-	currentRowSpawnInterval float32
-}
-
 type GridComponent struct {
-	BaseComponent
-	board Board
+	components.BaseComponent
+	board       *Board
+	maskManager *MaskManager
 
 	cellSize    int32
 	cellPadding int32
@@ -77,8 +34,20 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 	}
 
 	if rl.IsKeyPressed(rl.KeyR) {
-		// randomizeRow := int(rl.GetRandomValue(0, int32(g.board.currentRowIndex)))
-		g.board.rows[0].Randomize()
+		g.board.rows[0] = GenerateRandomRow()
+	}
+
+	g.maskManager.UpdateCurrentMask(gameTime)
+	currentMaskRowIndex := g.maskManager.currentMaskRowIndex
+	topRow := RowCount - g.board.currentRowIndex - 1
+
+	if currentMaskRowIndex >= topRow {
+		mask := g.maskManager.currentMask
+		g.board.rows[0].ApplyMask(*mask, mask.StartCol)
+		g.maskManager.DestroyCurrentMask()
+		nextMask := g.maskManager.PopMask()
+		g.maskManager.SetCurrentMask(nextMask)
+		fmt.Println("mask applied", nextMask.MaskType, nextMask.MaskShape, nextMask.StartCol, nextMask.Length)
 	}
 
 	row := g.board.rows[0]
@@ -105,7 +74,7 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 		fmt.Println("row spawned", g.board.currentRowIndex, len(g.board.rows))
 	}
 
-	if rl.IsKeyPressed(rl.KeySpace) {
+	if rl.IsKeyPressed(rl.KeyTab) {
 		g.board.rows[0].bits = 0b11111111
 	}
 
@@ -164,15 +133,18 @@ func (g *GridComponent) Render() {
 		}
 	}
 
+	// draw current mask
+	g.maskManager.RenderCurrentMask(g)
+
 	g.End()
 }
 
 func (g *GridComponent) Reset() {
-	board := Board{
+	board := &Board{
 		rows:                    make([]Row, 0),
 		currentRowIndex:         InitialRowCount - 1,
 		validRowStates:          make([]uint8, 0),
-		currentRowSpawnInterval: 0.5,
+		currentRowSpawnInterval: 3,
 	}
 	for range InitialRowCount {
 		board.rows = append(board.rows, GenerateRandomRow())
@@ -181,21 +153,31 @@ func (g *GridComponent) Reset() {
 	board.validRowStates = append(board.validRowStates, 0b0)
 
 	g.board = board
+
+	newMask := GenerateNewMask()
+	maskManager := &MaskManager{
+		currentMask: newMask,
+		nextMasks:   make([]*Mask, 0),
+	}
+	maskManager.QueueMask(GenerateNewMask())
+	g.maskManager = maskManager
 }
 
 func NewGridComponent() *GridComponent {
 	cellSize := int32(28)
 	cellPadding := int32(8)
-	cellColor := rl.Color{R: 0, G: 255, B: 0, A: 255}
+	// cellColor := rl.Color{R: 255, G: 255, B: 255, A: 200} // white
+	cellColor := rl.Color{R: 0, G: 255, B: 0, A: 200} // green
 
 	gridBorderThickness := int32(2)
-	gridBorderColor := rl.Color{R: 0, G: 255, B: 0, A: 150}
+	// gridBorderColor := rl.Color{R: 255, G: 255, B: 255, A: 150} // white
+	gridBorderColor := rl.Color{R: 0, G: 255, B: 0, A: 150} // green
 
 	gridWidth := (ColumnCount * cellSize) + ((ColumnCount - 1) * cellPadding) + (2 * (gridBorderThickness + gridBorderThickness/2)) + (2 * OffsetX)
 	gridHeight := (RowCount * cellSize) + ((RowCount - 1) * cellPadding) + (2 * (gridBorderThickness + gridBorderThickness/2)) + (2 * OffsetY)
 
 	gridComponent := &GridComponent{
-		BaseComponent:       NewBaseComponent("grid", gridWidth, gridHeight),
+		BaseComponent:       components.NewBaseComponent("grid", gridWidth, gridHeight),
 		cellSize:            cellSize,
 		cellPadding:         cellPadding,
 		cellColor:           cellColor,
