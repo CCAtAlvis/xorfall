@@ -24,9 +24,17 @@ func (r *Row) ClearBit(col int) {
 }
 
 func (r *Row) ApplyMask(mask Mask, startCol int) {
+	newBits := r.PreviewMaskResult(mask, startCol)
+	r.bits = newBits
+}
+
+// PreviewMaskResult returns the row bits as they would be after applying the mask (non-mutating).
+func (r *Row) PreviewMaskResult(mask Mask, startCol int) uint8 {
+	bits := r.bits
 	for i := range mask.Length {
+		col := startCol + int(i)
 		maskBit := mask.MaskShape&(1<<i) != 0
-		rowBit := r.IsBitSet(startCol + int(i))
+		rowBit := bits&(1<<col) != 0
 
 		var op bool
 		switch mask.MaskType {
@@ -35,7 +43,6 @@ func (r *Row) ApplyMask(mask Mask, startCol int) {
 		case MaskTypeXOR:
 			op = maskBit != rowBit
 		case MaskTypeNOT:
-			// Spec: NOT mask has all bits set to 1; we negate the row bit in the mask region.
 			op = !rowBit
 		case MaskTypeAND:
 			op = maskBit && rowBit
@@ -44,11 +51,12 @@ func (r *Row) ApplyMask(mask Mask, startCol int) {
 		}
 
 		if op {
-			r.SetBit(startCol + i)
+			bits |= 1 << col
 		} else {
-			r.ClearBit(startCol + i)
+			bits &^= 1 << col
 		}
 	}
+	return bits
 }
 
 // GenerateRow produces a row based on current phase (from configs.GameState().GetPhase()).

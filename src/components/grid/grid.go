@@ -35,6 +35,10 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 		return
 	}
 
+	if rl.IsKeyPressed(rl.KeyG) {
+		configs.EnableGhostPreview = !configs.EnableGhostPreview
+	}
+
 	if configs.GameState().GetGameState() != configs.GameStatePlaying {
 		return
 	}
@@ -128,10 +132,60 @@ func (g *GridComponent) Render() {
 		}
 	}
 
+	// ghost preview: in Phase 1 & 2, show subtle effect of current mask on the landing row
+	if configs.EnableGhostPreview {
+		g.renderGhostPreview()
+	}
+
 	// draw current mask
 	g.maskManager.RenderCurrentMask(g)
 
 	g.End()
+}
+
+// renderGhostPreview draws a prominent overlay on the landing row (top row) showing what the row
+// would look like after the current mask is applied. Only in Phase 1 and 2; original row stays visible.
+// Uses the mask type color and highlights cells that will change.
+func (g *GridComponent) renderGhostPreview() {
+	phase := configs.GameState().GetPhase()
+	if phase != configs.Phase1Learning && phase != configs.Phase2SkillBuilding {
+		return
+	}
+	mask := g.maskManager.currentMask
+	if mask == nil || len(g.board.rows) == 0 {
+		return
+	}
+	topRow := RowCount - g.board.currentRowIndex - 1
+	landingRow := g.board.rows[0]
+	previewBits := landingRow.PreviewMaskResult(*mask, mask.StartCol)
+	maskColor := MaskColorMap[mask.MaskType]
+
+	// Base ghost: mask-type color at good visibility (original row still shows through)
+	ghostFill := rl.Color{R: maskColor.R, G: maskColor.G, B: maskColor.B, A: 165}
+	ghostLine := rl.Color{R: maskColor.R, G: maskColor.G, B: maskColor.B, A: 130}
+	// Stronger highlight where the bit will change (fill or outline)
+	changeHighlight := rl.Color{R: 255, G: 255, B: 255, A: 200}
+
+	for i := range mask.Length {
+		col := mask.StartCol + int(i)
+		cellX := OffsetX + int32(col)*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
+		cellY := OffsetY + int32(topRow)*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
+		previewBit := previewBits&(1<<col) != 0
+		currentBit := landingRow.IsBitSet(col)
+		willChange := previewBit != currentBit
+
+		if previewBit {
+			rl.DrawRectangle(cellX, cellY, g.cellSize, g.cellSize, ghostFill)
+			if willChange {
+				rl.DrawRectangleLinesEx(rl.Rectangle{X: float32(cellX), Y: float32(cellY), Width: float32(g.cellSize), Height: float32(g.cellSize)}, 3, changeHighlight)
+			}
+		} else {
+			rl.DrawRectangleLinesEx(rl.Rectangle{X: float32(cellX), Y: float32(cellY), Width: float32(g.cellSize), Height: float32(g.cellSize)}, 3, ghostLine)
+			if willChange {
+				rl.DrawRectangleLinesEx(rl.Rectangle{X: float32(cellX), Y: float32(cellY), Width: float32(g.cellSize), Height: float32(g.cellSize)}, 2, changeHighlight)
+			}
+		}
+	}
 }
 
 func (g *GridComponent) Reset() {
