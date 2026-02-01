@@ -12,6 +12,7 @@ type Container struct {
 	Width     int32
 	Height    int32
 	Tint      rl.Color
+	Enabled   bool
 	Visible   bool
 	Layer     int32
 }

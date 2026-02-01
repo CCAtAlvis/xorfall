@@ -11,13 +11,16 @@ import (
 )
 
 type Game struct {
-	containers []render.Container
+	containers []*render.Container
 
 	scale   float32
 	offsetX float32
 	offsetY float32
 
-	isFullscreen bool
+	isFullscreen      bool
+	introComponent    *components.IntroComponent
+	gameOverComponent *components.GameOverComponent
+	gridComponent     *grid.GridComponent
 }
 
 func NewGame() *Game {
@@ -25,8 +28,8 @@ func NewGame() *Game {
 	rl.InitWindow(1280, 720, "My Raylib Game")
 	isFullscreen := false
 	if !rl.IsWindowFullscreen() {
-		// isFullscreen = true
-		// rl.ToggleFullscreen()
+		isFullscreen = true
+		rl.ToggleFullscreen()
 	}
 	rl.SetTargetFPS(configs.TargetFPS)
 	configs.Init()
@@ -50,11 +53,13 @@ func NewGame() *Game {
 
 	nextMaskComponent := grid.NewNextMaskComponent()
 	offsetX := int32(10)
-	// offsetY := int32(20)
 	maskGuideY := int32(20)
 	nextMaskY := maskGuideY + maskGuideHeight + 50
 
-	containers := []render.Container{
+	introComponent := components.NewIntroComponent()
+	gameOverComponent := components.NewGameOverComponent()
+
+	containers := []*render.Container{
 		// {
 		// 	Component: debugComponent,
 		// 	Tint:      rl.Color{R: 255, G: 255, B: 255, A: 200},
@@ -62,30 +67,53 @@ func NewGame() *Game {
 		// 	OffsetY:   int32(float32(configs.VirtualHeight)*0.5 - float32(debugHeight)*0.5),
 		// 	Visible:   true,
 		// },
-		{
+		&render.Container{
+			Component: introComponent,
+			Tint:      rl.White,
+			OffsetX:   0,
+			OffsetY:   0,
+			Enabled:   true,
+			Visible:   true,
+		},
+		&render.Container{
+			Component: gameOverComponent,
+			Tint:      rl.White,
+			OffsetX:   0,
+			OffsetY:   0,
+			Enabled:   true,
+			Visible:   true,
+		},
+		&render.Container{
 			Component: gridComponent,
 			Tint:      rl.White,
 			OffsetX:   gridOffsetX,
 			OffsetY:   gridOffsetY,
+			Enabled:   true,
+			Visible:   true,
 		},
-		{
+		&render.Container{
 			Component: maskGuideComponent,
 			Tint:      rl.White,
 			OffsetX:   offsetX,
 			OffsetY:   maskGuideY,
+			Enabled:   true,
+			Visible:   true,
 		},
-		{
+		&render.Container{
 			Component: nextMaskComponent,
 			Tint:      rl.White,
 			OffsetX:   offsetX,
 			OffsetY:   nextMaskY,
+			Enabled:   true,
+			Visible:   true,
 		},
-		// Score: right side, top-aligned (mirrors FPS on left). Alternatives: center vertically with OffsetY = (VirtualHeight - scoreHeight)/2, or bottom with OffsetY = VirtualHeight - scoreHeight - 10.
-		{
-			Component: components.NewScoreComponent(),
+		&render.Container{
+			Component: scoreComponent,
 			Tint:      rl.White,
 			OffsetX:   scoreOffsetX,
 			OffsetY:   scoreOffsetY,
+			Enabled:   true,
+			Visible:   true,
 		},
 		// {
 		// 	Component: components.NewFPSComponent(),
@@ -96,8 +124,11 @@ func NewGame() *Game {
 	}
 
 	game := &Game{
-		containers:   containers,
-		isFullscreen: isFullscreen,
+		containers:        containers,
+		isFullscreen:      isFullscreen,
+		introComponent:    introComponent,
+		gameOverComponent: gameOverComponent,
+		gridComponent:     gridComponent,
 	}
 
 	game.recalculateScale()
@@ -110,21 +141,56 @@ func (g *Game) Update() {
 		g.recalculateScale()
 	}
 
-	configs.GameTime.Update()
+	gs := configs.GameState()
+	state := gs.GetGameState()
 
-	for _, container := range g.containers {
-		component := container.Component
-		component.Update(configs.GameTime)
-		container.Render()
+	// Set Enabled and Visible per container from state. Enabled => update and draw; Visible => draw only.
+	for _, c := range g.containers {
+		switch c.Component.(type) {
+		case *components.IntroComponent:
+			c.Enabled = state == configs.GameStateIntroScreen
+			c.Visible = state == configs.GameStateIntroScreen
+		case *components.GameOverComponent:
+			c.Enabled = state == configs.GameStateGameOver
+			c.Visible = state == configs.GameStateGameOver
+		default:
+			c.Enabled = state == configs.GameStatePlaying
+			c.Visible = state == configs.GameStatePlaying
+		}
+	}
+
+	if state == configs.GameStatePlaying {
+		configs.GameTime.Update()
+	}
+
+	for _, c := range g.containers {
+		if !c.Enabled {
+			continue
+		}
+		c.Component.Update(configs.GameTime)
+		c.Render()
+	}
+
+	if state == configs.GameStateIntroScreen && g.introComponent.StartRequested() {
+		gs.SetGameState(configs.GameStatePlaying)
+	}
+	if state == configs.GameStateGameOver && g.gameOverComponent.RestartRequested() {
+		g.gridComponent.Reset()
+		gs.SetGameState(configs.GameStatePlaying)
 	}
 }
 
 func (g *Game) Render() {
 	rl.BeginTextureMode(configs.VirtualScreen)
-	rl.ClearBackground(rl.Blank)
-	for _, container := range g.containers {
-		container.Draw()
+	rl.ClearBackground(rl.Black)
+
+	for _, c := range g.containers {
+		if !c.Enabled || !c.Visible {
+			continue
+		}
+		c.Draw()
 	}
+
 	rl.EndTextureMode()
 }
 
