@@ -41,7 +41,7 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 		mask := g.maskManager.currentMask
 		g.board.rows[0].ApplyMask(*mask, mask.StartCol)
 		g.maskManager.DestroyCurrentMask()
-		nextMask := g.maskManager.PopMask()
+		nextMask := g.maskManager.GetNextMask()
 		g.maskManager.SetCurrentMask(nextMask)
 		fmt.Println("mask applied", nextMask.MaskType, nextMask.MaskShape, nextMask.StartCol, nextMask.Length)
 	}
@@ -54,6 +54,7 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 			// TODO: Handle this case
 			g.board.currentRowIndex = 0
 		}
+		configs.GameState().IncrementRowsCleared()
 		fmt.Println("row removed", g.board.currentRowIndex, len(g.board.rows))
 	}
 
@@ -143,12 +144,10 @@ func (g *GridComponent) Reset() {
 	board.validRowStates = append(board.validRowStates, 0b0)
 
 	g.board = board
+	configs.GameState().ResetScore()
 
-	newMask := GenerateNewMask()
-	maskManager := &MaskManager{
-		currentMask: newMask,
-		nextMasks:   make([]*Mask, 0),
-	}
+	maskManager := GetGlobalMaskManager()
+	maskManager.SetCurrentMask(GenerateNewMask())
 	maskManager.QueueMask(GenerateNewMask())
 	g.maskManager = maskManager
 }

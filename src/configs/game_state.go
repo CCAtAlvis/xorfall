@@ -31,12 +31,15 @@ const (
 )
 
 type GameStateManager struct {
-	state  GameStateEnum
-	events map[GameEventEnum][]func()
+	state        GameStateEnum
+	events       map[GameEventEnum][]func()
+	SurvivalTime float64
+	RowsCleared  int
 }
 
 var globalGameState = &GameStateManager{
-	state: GameStatePlaying,
+	state:  GameStatePlaying,
+	events: make(map[GameEventEnum][]func()),
 }
 
 func GameState() *GameStateManager {
@@ -70,4 +73,19 @@ func (g *GameStateManager) RegisterEventHandler(eventName GameEventEnum, callbac
 		g.events[eventName] = make([]func(), 0)
 	}
 	g.events[eventName] = append(g.events[eventName], callback)
+}
+
+func (g *GameStateManager) AddSurvivalTime(delta float64) {
+	if g.GetGameState() == GameStatePlaying {
+		g.SurvivalTime += delta
+	}
+}
+
+func (g *GameStateManager) IncrementRowsCleared() {
+	g.RowsCleared++
+}
+
+func (g *GameStateManager) ResetScore() {
+	g.SurvivalTime = 0
+	g.RowsCleared = 0
 }

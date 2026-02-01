@@ -33,6 +33,27 @@ func NewGame() *Game {
 
 	// debugComponent := components.NewDebugComponent()
 	// debugWidth, debugHeight := debugComponent.GetSize()
+
+	gridComponent := grid.NewGridComponent()
+	gridWidth, gridHeight := gridComponent.GetSize()
+	gridOffsetX := int32(float32(configs.VirtualWidth)*0.5 - float32(gridWidth)*0.5)
+	gridOffsetY := int32(float32(configs.VirtualHeight)*0.5 - float32(gridHeight)*0.5)
+
+	scoreComponent := components.NewScoreComponent()
+	scoreWidth, _ := scoreComponent.GetSize()
+	scoreOffsetX := configs.VirtualWidth - scoreWidth - 10
+	scoreOffsetY := gridOffsetY
+
+	// Left column: FPS, then mask guide, then next mask
+	maskGuideComponent := grid.NewMaskGuideComponent()
+	_, mgH := maskGuideComponent.GetSize()
+
+	nextMaskComponent := grid.NewNextMaskComponent()
+	leftX := int32(10)
+	fpsY := int32(10)
+	maskGuideY := fpsY + 120 + 10
+	nextMaskY := maskGuideY + mgH + 50
+
 	containers := []render.Container{
 		// {
 		// 	Component: debugComponent,
@@ -42,16 +63,35 @@ func NewGame() *Game {
 		// 	Visible:   true,
 		// },
 		{
-			Component: grid.NewGridComponent(),
+			Component: gridComponent,
 			Tint:      rl.White,
-			OffsetX:   int32(float32(configs.VirtualWidth)*0.5 - float32(360)*0.5),
-			OffsetY:   int32(float32(configs.VirtualHeight)*0.5 - float32(720)*0.5),
+			OffsetX:   gridOffsetX,
+			OffsetY:   gridOffsetY,
+		},
+		{
+			Component: maskGuideComponent,
+			Tint:      rl.White,
+			OffsetX:   leftX,
+			OffsetY:   maskGuideY,
+		},
+		{
+			Component: nextMaskComponent,
+			Tint:      rl.White,
+			OffsetX:   leftX,
+			OffsetY:   nextMaskY,
+		},
+		// Score: right side, top-aligned (mirrors FPS on left). Alternatives: center vertically with OffsetY = (VirtualHeight - scoreHeight)/2, or bottom with OffsetY = VirtualHeight - scoreHeight - 10.
+		{
+			Component: components.NewScoreComponent(),
+			Tint:      rl.White,
+			OffsetX:   scoreOffsetX,
+			OffsetY:   scoreOffsetY,
 		},
 		{
 			Component: components.NewFPSComponent(),
 			Tint:      rl.White,
-			OffsetX:   10,
-			OffsetY:   10,
+			OffsetX:   leftX,
+			OffsetY:   fpsY,
 		},
 	}
 
