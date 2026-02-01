@@ -174,6 +174,10 @@ type MaskManager struct {
 	currentMaskLastUpdateTime float32
 	currentMaskRowIndex       int
 	currentMaskKeepFalling    bool
+	downArrowHeldForRepeat    bool
+
+	trailStartRowIndex int
+	showTrailLastFrame bool
 
 	nextMasks []*Mask
 }
@@ -206,6 +210,9 @@ func (m *MaskManager) DestroyCurrentMask() {
 	m.currentMaskRowIndex = 0
 	m.currentMaskLastUpdateTime = 0
 	m.currentMaskKeepFalling = false
+	m.downArrowHeldForRepeat = false
+	m.trailStartRowIndex = 0
+	m.showTrailLastFrame = false
 }
 
 func (m *MaskManager) SetCurrentMask(mask *Mask) {
@@ -227,7 +234,13 @@ func (m *MaskManager) UpdateCurrentMask(gameTime *configs.GameTimeManager) {
 		}
 	}
 
+	if !rl.IsKeyDown(rl.KeyDown) {
+		m.downArrowHeldForRepeat = false
+	}
 	if rl.IsKeyPressed(rl.KeyDown) || rl.IsKeyPressedRepeat(rl.KeyDown) {
+		if rl.IsKeyPressedRepeat(rl.KeyDown) {
+			m.downArrowHeldForRepeat = true
+		}
 		newRow := m.currentMaskRowIndex + 1
 		if newRow < RowCount {
 			m.currentMaskRowIndex = newRow
@@ -259,24 +272,69 @@ func (m *MaskManager) UpdateCurrentMask(gameTime *configs.GameTimeManager) {
 
 		}
 	}
+
+	// track when trail activates so we can grow it (not pop in at full length)
+	showTrail := m.currentMaskKeepFalling || m.downArrowHeldForRepeat
+	if showTrail && !m.showTrailLastFrame {
+		m.trailStartRowIndex = m.currentMaskRowIndex
+	}
+	m.showTrailLastFrame = showTrail
 }
+
+const trailLength = 6
+const trailAlphaStart = 0.6
+const trailAlphaEnd = 0.12
 
 func (m *MaskManager) RenderCurrentMask(g *GridComponent) {
 	// start position of current mask is one cell above the grid border
-
 	mask := m.currentMask
+	maskColor := MaskColorMap[mask.MaskType]
+
+	showTrail := m.currentMaskKeepFalling || m.downArrowHeldForRepeat
+
+	if showTrail {
+		n := m.currentMaskRowIndex - m.trailStartRowIndex
+		if n < 0 {
+			n = 0
+		}
+		if n > trailLength {
+			n = trailLength
+		}
+		divisor := n - 1
+		if divisor < 1 {
+			divisor = 1
+		}
+		for t := 1; t <= n; t++ {
+			trailRow := m.currentMaskRowIndex - 1 - t
+			alphaFrac := trailAlphaStart - (trailAlphaStart-trailAlphaEnd)*float32(t-1)/float32(divisor)
+			if alphaFrac < 0 {
+				alphaFrac = 0
+			}
+			trailColor := maskColor
+			trailColor.A = uint8(alphaFrac * 255)
+
+			for i := range mask.Length {
+				maskBit := mask.MaskShape&(1<<i) != 0
+				maskStartX := OffsetX + int32(mask.StartCol+int(i))*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
+				maskStartY := OffsetY + int32(trailRow)*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
+				if maskBit {
+					rl.DrawRectangle(maskStartX, maskStartY, g.cellSize, g.cellSize, trailColor)
+				} else {
+					rl.DrawRectangleLinesEx(rl.Rectangle{X: float32(maskStartX), Y: float32(maskStartY), Width: float32(g.cellSize), Height: float32(g.cellSize)}, 4, trailColor)
+				}
+			}
+		}
+	}
+
+	// draw current mask on top
 	for i := range mask.Length {
 		maskBit := mask.MaskShape&(1<<i) != 0
-
 		maskStartX := OffsetX + int32(mask.StartCol+int(i))*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
 		maskStartY := OffsetY + int32(m.currentMaskRowIndex-1)*(g.cellSize+g.cellPadding) + (g.gridBorderThickness + g.gridBorderThickness/2)
-
-		maskColor := MaskColorMap[mask.MaskType]
 		if maskBit {
 			rl.DrawRectangle(maskStartX, maskStartY, g.cellSize, g.cellSize, maskColor)
 		} else {
 			rl.DrawRectangleLinesEx(rl.Rectangle{X: float32(maskStartX), Y: float32(maskStartY), Width: float32(g.cellSize), Height: float32(g.cellSize)}, 4, maskColor)
 		}
 	}
-
 }
