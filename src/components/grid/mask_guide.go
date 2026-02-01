@@ -39,11 +39,11 @@ func NewMaskGuideComponent() *MaskGuideComponent {
 
 	oneRowHeight := guideLabelFontSize + guideRowSpacing
 	sectionHeight := guideTitleFontSize + guideSectionSpacing + 3*oneRowHeight
-	totalHeight := int32(guidePadding*2 + 3*sectionHeight + 2*guideSectionSpacing)
+	totalHeight := int32(guidePadding*2 + 5*sectionHeight + 4*guideSectionSpacing)
 
 	w := guidePadding*2 + blockWidth
 	w = w * 2
-	h := totalHeight
+	h := totalHeight + 3*oneRowHeight
 
 	return &MaskGuideComponent{
 		BaseComponent: components.NewBaseComponent("mask_guide", w, h),
@@ -60,6 +60,10 @@ func applyExample(maskType MaskType, maskBit, rowBit bool) bool {
 		return maskBit != rowBit
 	case MaskTypeNOT:
 		return !maskBit
+	case MaskTypeAND:
+		return maskBit && rowBit
+	case MaskTypeXNOR:
+		return maskBit == rowBit
 	default:
 		return false
 	}
@@ -70,8 +74,8 @@ func (m *MaskGuideComponent) Render() {
 	rl.ClearBackground(rl.Blank)
 
 	y := int32(guidePadding)
-	maskTypes := []MaskType{MaskTypeOR, MaskTypeXOR, MaskTypeNOT}
-	titles := []string{"yellow mask (OR)", "blue mask (XOR)", "red mask (NOT)"}
+	maskTypes := []MaskType{MaskTypeOR, MaskTypeXOR, MaskTypeNOT, MaskTypeAND, MaskTypeXNOR}
+	titles := []string{"gold (OR)", "blue (XOR)", "orange (NOT)", "gray (AND)", "red (XNOR)"}
 
 	for si, maskType := range maskTypes {
 		color := MaskColorMap[maskType]
@@ -120,6 +124,10 @@ func (m *MaskGuideComponent) Render() {
 		}
 		y += guideLabelFontSize + guideRowSpacing + guideCellSize + guideSectionSpacing
 	}
+
+	//debuf bounding box
+	width, height := m.GetSize()
+	rl.DrawRectangleLinesEx(rl.Rectangle{X: 0, Y: 0, Width: float32(width), Height: float32(height)}, 2, rl.Red)
 
 	m.End()
 }

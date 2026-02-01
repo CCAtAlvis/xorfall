@@ -1,8 +1,6 @@
 package grid
 
 import (
-	"math"
-
 	"github.com/CCAtAlvis/xorfall/src/configs"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -13,14 +11,17 @@ const (
 	MaskTypeOR MaskType = iota
 	MaskTypeXOR
 	MaskTypeNOT
-	// MaskTypeAND
+	MaskTypeAND
+	MaskTypeXNOR
 )
 
+// Color hierarchy: OR = best (gold), XOR/NOT = ok (blue/orange), AND = worst (muted), XNOR = red.
 var MaskColorMap = map[MaskType]rl.Color{
-	MaskTypeOR:  rl.Yellow,
-	MaskTypeXOR: rl.Blue,
-	MaskTypeNOT: rl.Red,
-	// MaskTypeAND: rl.Yellow,
+	MaskTypeOR:   rl.Yellow,
+	MaskTypeXOR:  rl.Blue,
+	MaskTypeNOT:  rl.Orange,
+	MaskTypeAND:  rl.Color{R: 130, G: 130, B: 140, A: 255},
+	MaskTypeXNOR: rl.Red,
 }
 
 type Mask struct {
@@ -43,16 +44,119 @@ func NewMask(maskType MaskType, maskShape uint8, speed int32, startCol int, leng
 }
 
 func GenerateNewMask() *Mask {
-	// TODO: manage these probabilities better
-	maskType := MaskType(rl.GetRandomValue(0, 2))
-	length := rl.GetRandomValue(1, 4)
-	maskShape := uint8(rl.GetRandomValue(0, int32(math.Pow(2, float64(length))-1)))
+	phase := configs.GameState().GetPhase()
+	maskType := rollOperator(phase)
+	length := rollLength(phase)
+
+	var maskShape uint8
+	switch {
+	case maskType == MaskTypeNOT:
+		// NOT: all bits of mask should be set to 1.
+		maskShape = uint8(1<<length) - 1
+	case maskType == MaskTypeOR && (phase == configs.Phase1Learning || phase == configs.Phase2SkillBuilding):
+		// OR with all 0s does nothing; in Phase 1 and 2, OR mask is all 1s only.
+		maskShape = uint8(1<<length) - 1
+	case maskType == MaskTypeAND:
+		// AND with all 1s does nothing; random shape otherwise (0..all 1s).
+		maskShape = uint8(rl.GetRandomValue(0, int32(1<<length)-1))
+	default:
+		maskShape = uint8(rl.GetRandomValue(0, int32(1<<length)-1))
+	}
 
 	speed := int32(3)
-	startCol := rl.GetRandomValue(0, ColumnCount-length)
+	startCol := rl.GetRandomValue(0, int32(ColumnCount-length))
 
-	mask := NewMask(maskType, maskShape, speed, int(startCol), int(length))
-	return mask
+	return NewMask(maskType, maskShape, speed, int(startCol), int(length))
+}
+
+func rollOperator(phase configs.Phase) MaskType {
+	roll := rl.GetRandomValue(0, 99)
+	switch phase {
+	case configs.Phase1Learning:
+		// OR 53%, XOR 30%, NOT 10%, AND 2%, XNOR 5%
+		if roll < 53 {
+			return MaskTypeOR
+		}
+		if roll < 83 {
+			return MaskTypeXOR
+		}
+		if roll < 93 {
+			return MaskTypeNOT
+		}
+		if roll < 95 {
+			return MaskTypeAND
+		}
+		return MaskTypeXNOR
+	case configs.Phase2SkillBuilding:
+		// OR 32%, XOR 37%, NOT 20%, AND 5%, XNOR 6%
+		if roll < 32 {
+			return MaskTypeOR
+		}
+		if roll < 69 {
+			return MaskTypeXOR
+		}
+		if roll < 89 {
+			return MaskTypeNOT
+		}
+		if roll < 94 {
+			return MaskTypeAND
+		}
+		return MaskTypeXNOR
+	default: // Phase3Mastery
+		// OR 12%, XOR 45%, NOT 25%, AND 8%, XNOR 10%
+		if roll < 12 {
+			return MaskTypeOR
+		}
+		if roll < 57 {
+			return MaskTypeXOR
+		}
+		if roll < 82 {
+			return MaskTypeNOT
+		}
+		if roll < 90 {
+			return MaskTypeAND
+		}
+		return MaskTypeXNOR
+	}
+}
+
+func rollLength(phase configs.Phase) int {
+	roll := rl.GetRandomValue(0, 99)
+	switch phase {
+	case configs.Phase1Learning:
+		if roll < 25 {
+			return 1
+		}
+		if roll < 75 {
+			return 2
+		}
+		if roll < 95 {
+			return 3
+		}
+		return 4
+	case configs.Phase2SkillBuilding:
+		if roll < 15 {
+			return 1
+		}
+		if roll < 50 {
+			return 2
+		}
+		if roll < 90 {
+			return 3
+		}
+		return 4
+	default: // Phase3Mastery
+		if roll < 5 {
+			return 1
+		}
+		if roll < 20 {
+			return 2
+		}
+		if roll < 70 {
+			return 3
+		}
+		return 4
+	}
 }
 
 type MaskManager struct {
@@ -89,7 +193,7 @@ func (m *MaskManager) GetNextMask() *Mask {
 
 func (m *MaskManager) DestroyCurrentMask() {
 	m.currentMask = nil
-	m.currentMaskRowIndex = -1
+	m.currentMaskRowIndex = 0
 	m.currentMaskLastUpdateTime = 0
 	m.currentMaskKeepFalling = false
 }
@@ -129,8 +233,13 @@ func (m *MaskManager) UpdateCurrentMask(gameTime *configs.GameTimeManager) {
 		m.currentMask.Speed = 20
 	}
 
+	// Fall speed: min(2.5, 0.5 + (elapsed/30)*0.15); hard drop = 20 rows/sec
+	effectiveSpeed := configs.FallSpeed(configs.GameState().SurvivalTime)
+	if m.currentMaskKeepFalling {
+		effectiveSpeed = 20
+	}
 	m.currentMaskLastUpdateTime += configs.GameTime.Delta
-	if m.currentMaskLastUpdateTime >= 1.0/float32(m.currentMask.Speed) {
+	if m.currentMaskLastUpdateTime >= 1.0/effectiveSpeed {
 		m.currentMaskLastUpdateTime = 0
 		m.currentMaskRowIndex++
 		if m.currentMaskRowIndex >= RowCount {

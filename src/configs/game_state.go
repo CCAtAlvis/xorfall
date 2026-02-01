@@ -30,6 +30,31 @@ const (
 	GameEventMaskConsumed GameEventEnum = iota
 )
 
+// Phase thresholds for implicit onboarding (PRE-MVP spec). Do not compute difficulty dynamically.
+const (
+	Phase1RowsThreshold = 5   // Learning: cleared < 5
+	Phase2RowsThreshold = 15  // Skill building: 5 <= cleared < 15; Mastery: cleared >= 15
+)
+
+type Phase int
+
+const (
+	Phase1Learning Phase = iota
+	Phase2SkillBuilding
+	Phase3Mastery
+)
+
+func (g *GameStateManager) GetPhase() Phase {
+	c := g.RowsCleared
+	if c < Phase1RowsThreshold {
+		return Phase1Learning
+	}
+	if c < Phase2RowsThreshold {
+		return Phase2SkillBuilding
+	}
+	return Phase3Mastery
+}
+
 type GameStateManager struct {
 	state        GameStateEnum
 	events       map[GameEventEnum][]func()

@@ -29,6 +29,11 @@ type GridComponent struct {
 }
 
 func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
+	if rl.IsKeyPressed(rl.KeyQ) {
+		g.Reset()
+		return
+	}
+
 	if configs.GameState().GetGameState() != configs.GameStatePlaying {
 		return
 	}
@@ -58,6 +63,8 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 		fmt.Println("row removed", g.board.currentRowIndex, len(g.board.rows))
 	}
 
+	// Row interval: max(1.5, 6.0 - (elapsed/10)*0.1)
+	g.board.rowSpawnInterval = float32(configs.RowInterval(configs.GameState().SurvivalTime))
 	g.board.lastRowSpawnTime += configs.GameTime.Delta
 	if g.board.lastRowSpawnTime >= g.board.rowSpawnInterval {
 		g.board.currentRowIndex++
@@ -65,12 +72,8 @@ func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 			configs.GameState().SetGameState(configs.GameStateGameOver)
 		}
 		g.board.lastRowSpawnTime = 0
-		g.board.rows = append(g.board.rows, GenerateRandomRow())
+		g.board.rows = append(g.board.rows, GenerateRow(configs.GameState().GetPhase()))
 		fmt.Println("row spawned", g.board.currentRowIndex, len(g.board.rows))
-	}
-
-	if rl.IsKeyPressed(rl.KeyQ) {
-		g.Reset()
 	}
 }
 
@@ -135,10 +138,10 @@ func (g *GridComponent) Reset() {
 		rows:             make([]Row, 0),
 		currentRowIndex:  InitialRowCount - 1,
 		validRowStates:   make([]uint8, 0),
-		rowSpawnInterval: 2,
+		rowSpawnInterval: float32(configs.InitialRowInterval),
 	}
 	for range InitialRowCount {
-		board.rows = append(board.rows, GenerateRandomRow())
+		board.rows = append(board.rows, GenerateRow(configs.GameState().GetPhase()))
 	}
 	board.validRowStates = append(board.validRowStates, 0b11111111)
 	board.validRowStates = append(board.validRowStates, 0b0)

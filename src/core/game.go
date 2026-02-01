@@ -46,13 +46,13 @@ func NewGame() *Game {
 
 	// Left column: FPS, then mask guide, then next mask
 	maskGuideComponent := grid.NewMaskGuideComponent()
-	_, mgH := maskGuideComponent.GetSize()
+	_, maskGuideHeight := maskGuideComponent.GetSize()
 
 	nextMaskComponent := grid.NewNextMaskComponent()
-	leftX := int32(10)
-	fpsY := int32(10)
-	maskGuideY := fpsY + 120 + 10
-	nextMaskY := maskGuideY + mgH + 50
+	offsetX := int32(10)
+	// offsetY := int32(20)
+	maskGuideY := int32(20)
+	nextMaskY := maskGuideY + maskGuideHeight + 50
 
 	containers := []render.Container{
 		// {
@@ -71,13 +71,13 @@ func NewGame() *Game {
 		{
 			Component: maskGuideComponent,
 			Tint:      rl.White,
-			OffsetX:   leftX,
+			OffsetX:   offsetX,
 			OffsetY:   maskGuideY,
 		},
 		{
 			Component: nextMaskComponent,
 			Tint:      rl.White,
-			OffsetX:   leftX,
+			OffsetX:   offsetX,
 			OffsetY:   nextMaskY,
 		},
 		// Score: right side, top-aligned (mirrors FPS on left). Alternatives: center vertically with OffsetY = (VirtualHeight - scoreHeight)/2, or bottom with OffsetY = VirtualHeight - scoreHeight - 10.
@@ -87,12 +87,12 @@ func NewGame() *Game {
 			OffsetX:   scoreOffsetX,
 			OffsetY:   scoreOffsetY,
 		},
-		{
-			Component: components.NewFPSComponent(),
-			Tint:      rl.White,
-			OffsetX:   leftX,
-			OffsetY:   fpsY,
-		},
+		// {
+		// 	Component: components.NewFPSComponent(),
+		// 	Tint:      rl.White,
+		// 	OffsetX:   offsetX,
+		// 	OffsetY:   offsetY,
+		// },
 	}
 
 	game := &Game{
