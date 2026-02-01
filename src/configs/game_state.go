@@ -4,6 +4,7 @@ type GameStateEnum int
 
 const (
 	GameStateInit GameStateEnum = iota
+	GameStateIntroScreen
 	GameStatePlaying
 	GameStatePaused
 	GameStateGameOver
@@ -63,7 +64,7 @@ type GameStateManager struct {
 }
 
 var globalGameState = &GameStateManager{
-	state:  GameStatePlaying,
+	state:  GameStateIntroScreen,
 	events: make(map[GameEventEnum][]func()),
 }
 
