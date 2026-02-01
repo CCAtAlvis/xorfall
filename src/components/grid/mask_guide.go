@@ -125,9 +125,5 @@ func (m *MaskGuideComponent) Render() {
 		y += guideLabelFontSize + guideRowSpacing + guideCellSize + guideSectionSpacing
 	}
 
-	//debuf bounding box
-	width, height := m.GetSize()
-	rl.DrawRectangleLinesEx(rl.Rectangle{X: 0, Y: 0, Width: float32(width), Height: float32(height)}, 2, rl.Red)
-
 	m.End()
 }

@@ -45,8 +45,8 @@ func NewMask(maskType MaskType, maskShape uint8, speed int32, startCol int, leng
 
 func GenerateNewMask() *Mask {
 	phase := configs.GameState().GetPhase()
-	maskType := rollOperator(phase)
 	length := rollLength(phase)
+	maskType := rollOperator(phase, length)
 
 	var maskShape uint8
 	switch {
@@ -69,54 +69,61 @@ func GenerateNewMask() *Mask {
 	return NewMask(maskType, maskShape, speed, int(startCol), int(length))
 }
 
-func rollOperator(phase configs.Phase) MaskType {
+func rollOperator(phase configs.Phase, length int) MaskType {
 	roll := rl.GetRandomValue(0, 99)
 	switch phase {
 	case configs.Phase1Learning:
-		// OR 53%, XOR 30%, NOT 10%, AND 2%, XNOR 5%
-		if roll < 53 {
-			return MaskTypeOR
-		}
-		if roll < 83 {
-			return MaskTypeXOR
-		}
-		if roll < 93 {
+		// Phase 1 length 1 or 2: skip XOR (OR 58%, XNOR 28%, NOT 14%)
+		if length == 1 || length == 2 {
+			if roll < 58 {
+				return MaskTypeOR
+			}
+			if roll < 86 {
+				return MaskTypeXNOR
+			}
 			return MaskTypeNOT
 		}
-		if roll < 95 {
-			return MaskTypeAND
+		// OR 40%, XOR 30%, XNOR 20%, NOT 10%, AND 0%
+		if roll < 40 {
+			return MaskTypeOR
+		}
+		if roll < 70 {
+			return MaskTypeXOR
+		}
+		if roll < 80 {
+			return MaskTypeNOT
 		}
 		return MaskTypeXNOR
 	case configs.Phase2SkillBuilding:
-		// OR 32%, XOR 37%, NOT 20%, AND 5%, XNOR 6%
-		if roll < 32 {
+		// OR 20%, XOR 35%, XNOR 25%, NOT 18%, AND 2%
+		if roll < 20 {
 			return MaskTypeOR
 		}
-		if roll < 69 {
+		if roll < 55 {
 			return MaskTypeXOR
 		}
-		if roll < 89 {
+		if roll < 80 {
+			return MaskTypeXNOR
+		}
+		if roll < 98 {
 			return MaskTypeNOT
 		}
-		if roll < 94 {
-			return MaskTypeAND
-		}
-		return MaskTypeXNOR
+		return MaskTypeAND
 	default: // Phase3Mastery
-		// OR 12%, XOR 45%, NOT 25%, AND 8%, XNOR 10%
-		if roll < 12 {
+		// OR 8%, XOR 40%, XNOR 30%, NOT 20%, AND 2%
+		if roll < 8 {
 			return MaskTypeOR
 		}
-		if roll < 57 {
+		if roll < 48 {
 			return MaskTypeXOR
 		}
-		if roll < 82 {
+		if roll < 78 {
+			return MaskTypeXNOR
+		}
+		if roll < 98 {
 			return MaskTypeNOT
 		}
-		if roll < 90 {
-			return MaskTypeAND
-		}
-		return MaskTypeXNOR
+		return MaskTypeAND
 	}
 }
 
@@ -124,10 +131,11 @@ func rollLength(phase configs.Phase) int {
 	roll := rl.GetRandomValue(0, 99)
 	switch phase {
 	case configs.Phase1Learning:
+		// 1 25%, 2 40%, 3 30%, 4 5%
 		if roll < 25 {
 			return 1
 		}
-		if roll < 75 {
+		if roll < 65 {
 			return 2
 		}
 		if roll < 95 {
@@ -135,24 +143,26 @@ func rollLength(phase configs.Phase) int {
 		}
 		return 4
 	case configs.Phase2SkillBuilding:
+		// 1 15%, 2 35%, 3 35%, 4 15%
 		if roll < 15 {
 			return 1
 		}
 		if roll < 50 {
 			return 2
 		}
-		if roll < 90 {
+		if roll < 85 {
 			return 3
 		}
 		return 4
 	default: // Phase3Mastery
+		// 1: 5%, 2: 20%, 3: 50%, 4: 25%
 		if roll < 5 {
 			return 1
 		}
-		if roll < 20 {
+		if roll < 25 {
 			return 2
 		}
-		if roll < 70 {
+		if roll < 75 {
 			return 3
 		}
 		return 4

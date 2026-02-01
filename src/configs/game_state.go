@@ -32,8 +32,8 @@ const (
 
 // Phase thresholds for implicit onboarding (PRE-MVP spec). Do not compute difficulty dynamically.
 const (
-	Phase1RowsThreshold = 5   // Learning: cleared < 5
-	Phase2RowsThreshold = 15  // Skill building: 5 <= cleared < 15; Mastery: cleared >= 15
+	Phase1RowsThreshold = 10 // Learning: cleared < 5
+	Phase2RowsThreshold = 30 // Skill building: 5 <= cleared < 15; Mastery: cleared >= 15
 )
 
 type Phase int

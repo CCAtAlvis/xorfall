@@ -31,6 +31,7 @@ type GridComponent struct {
 func (g *GridComponent) Update(gameTime *configs.GameTimeManager) {
 	if rl.IsKeyPressed(rl.KeyQ) {
 		g.Reset()
+		configs.GameState().SetGameState(configs.GameStatePlaying)
 		return
 	}
 

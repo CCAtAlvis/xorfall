@@ -155,7 +155,7 @@ func (g *Game) Draw() {
 	)
 
 	// debug with a white rectangle border for virtual screen
-	rl.DrawRectangleLinesEx(rl.Rectangle{X: g.offsetX, Y: g.offsetY, Width: float32(configs.VirtualWidth) * g.scale, Height: float32(configs.VirtualHeight) * g.scale}, 10, rl.White)
+	// rl.DrawRectangleLinesEx(rl.Rectangle{X: g.offsetX, Y: g.offsetY, Width: float32(configs.VirtualWidth) * g.scale, Height: float32(configs.VirtualHeight) * g.scale}, 10, rl.White)
 
 	rl.EndDrawing()
 }

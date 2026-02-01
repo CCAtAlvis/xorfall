@@ -5,7 +5,7 @@ const (
 	InitialRowInterval   = 6.0
 	MinRowInterval       = 1.5
 	RowIntervalDecRate   = 0.1
-	RowIntervalDecPeriod = 10.0
+	RowIntervalDecPeriod = 30.0
 )
 
 // RowInterval returns the current row spawn interval in seconds for the given elapsed time.
