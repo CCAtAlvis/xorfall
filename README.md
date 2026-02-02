@@ -9,7 +9,7 @@ and run the executable file.
 
 ## Play
 
-Play the game here: https://ccatalvis.github.io/xorfall/index/index.html
+Play the game here: [https://ccatalvis.github.io/xorfall/index/index.html](https://ccatalvis.github.io/xorfall/index/index.html)
 
 ## Build
 
